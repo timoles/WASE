@@ -1,0 +1,63 @@
+All requests with HEADERNAME header:
+{
+    "query": {
+        "nested": {
+            "path": "response.headers",
+            "query": {
+                "match_phrase": {
+                    "response.headers.name": "HEADERNAME"
+                }
+            }
+        }
+    }
+}
+
+All requests without HEADERNAME header:
+{
+    "query": {
+        "bool": {
+            "must_not": {
+                "nested": {
+                    "path": "response.headers",
+                    "query": {
+                        "match_phrase": {
+                            "response.headers.name": "HEADERNAME"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+All POST requests:
+{
+    "query": {
+        "match_phrase": {
+            "request.method": "POST"
+        }
+    }
+}
+
+All POST requests without parameter PARAMNAME:
+{
+    "query": {
+        "bool": {
+            "must": {
+                "match_phrase": {
+                    "request.method": "POST"
+                }
+            },
+            "must_not": {
+                "nested": {
+                    "path": "request.parameters",
+                    "query": {
+                        "match_phrase": {
+                            "request.parameters.name": "PARAMNAME"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
