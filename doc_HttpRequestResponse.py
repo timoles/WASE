@@ -23,6 +23,8 @@ import re
 reHeader = re.compile("^(.*?):\s*(.*)$")
 
 def parse_header(header):
+    # BUG: erste Zeile auch enthalten
+    # TODO: support for multiline headers
     match = reHeader.search(header)
     if match:
         return { 'name': match.group(1), 'value': match.group(2) }
@@ -61,7 +63,7 @@ class DocHTTPRequestResponse(DocType):
     response = Object(
             properties = {
                 'status': Short(),
-                'stated_content_type': String(),
+                'content_type': String(),
                 'inferred_content_type': String(),
                 'headers': Nested(
                     properties = {
