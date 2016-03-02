@@ -27,7 +27,7 @@ reHeader = re.compile("^(.*?):\s*(.*)$")
 ES_host = "localhost"
 ES_index = "burp"
 Burp_Tools = IBurpExtenderCallbacks.TOOL_PROXY
-Burp_onlyResponses = True
+Burp_onlyResponses = True       # Usually what you want, responses also contain requests
 #########################################
 
 class BurpExtender(IBurpExtender, IHttpListener):
@@ -38,9 +38,10 @@ class BurpExtender(IBurpExtender, IHttpListener):
         self.callbacks.registerHttpListener(self)
         self.out = callbacks.getStdout()
 
-        connections.create_connection(hosts=[ES_host])
+        res = connections.create_connection(hosts=[ES_host])
         idx = Index(ES_index)
         idx.doc_type(DocHTTPRequestResponse)
+        try:
             idx.create()
         except:
             print("Index already exists")
@@ -48,14 +49,14 @@ class BurpExtender(IBurpExtender, IHttpListener):
 
     ### IHttpListener ###
     def processHttpMessage(self, tool, isRequest, msg):
-        if not tool & Burp_Tools:
+        if not tool & Burp_Tools or isRequest and Burp_onlyResponses:
             return
 
+        self.saveToES(msg)
+
+    def saveToES(self, msg):
         httpService = msg.getHttpService()
         doc = DocHTTPRequestResponse(protocol=httpService.getProtocol(), host=httpService.getHost(), port=httpService.getPort())
-
-        if isRequest and Burp_onlyResponses:
-            return
 
         request = msg.getRequest()
         response = msg.getResponse()
@@ -70,7 +71,7 @@ class BurpExtender(IBurpExtender, IHttpListener):
                 try:
                     doc.add_request_header(header)
                 except:
-                    print(header)
+                    doc.request.requestline = header
 
             parameters = iRequest.getParameters()
             for parameter in parameters:
@@ -127,7 +128,7 @@ class BurpExtender(IBurpExtender, IHttpListener):
                 try:
                     doc.add_response_header(header)
                 except:
-                    print(header)
+                    doc.response.responseline = header
 
             cookies = iResponse.getCookies()
             for cookie in cookies:

@@ -1,3 +1,26 @@
+Simple
+======
+All responses that set cookies:
+response.headernames:"Set-Cookie"
+
+All responses without X-Frame-Options header:
+NOT response.headernames:"X-Frame-Options"
+
+All detected HTML responses:
+response.inferred_content_type:html
+
+Detected and declared HTML responses:
+response.inferred_content_type:html OR response.content_type:html
+
+All request with a particular parameter:
+request.parameternames:csrftoken
+
+All request without a particular parameter:
+NOT request.parameternames:csrftoken
+
+JSON
+====
+
 All requests with HEADERNAME header:
 {
     "query": {
