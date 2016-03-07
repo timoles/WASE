@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from burp import IBurpExtender, IBurpExtenderCallbacks, IHttpListener, IRequestInfo, IParameter
+from burp import IBurpExtender, IBurpExtenderCallbacks, IHttpListener, IRequestInfo, IParameter, IContextMenuFactory
+from javax.swing import JMenuItem, ProgressMonitor
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Index
 from doc_HttpRequestResponse import DocHTTPRequestResponse
@@ -30,12 +31,13 @@ Burp_Tools = IBurpExtenderCallbacks.TOOL_PROXY
 Burp_onlyResponses = True       # Usually what you want, responses also contain requests
 #########################################
 
-class BurpExtender(IBurpExtender, IHttpListener):
+class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
     def registerExtenderCallbacks(self, callbacks):
         self.callbacks = callbacks
         self.helpers = callbacks.getHelpers()
         callbacks.setExtensionName("Storing HTTP Requests/Responses into ElasticSearch")
         self.callbacks.registerHttpListener(self)
+        self.callbacks.registerContextMenuFactory(self)
         self.out = callbacks.getStdout()
 
         res = connections.create_connection(hosts=[ES_host])
@@ -54,6 +56,27 @@ class BurpExtender(IBurpExtender, IHttpListener):
 
         self.saveToES(msg)
 
+    ### IContextMenuFactory ###
+    def createMenuItems(self, invocation):
+        menuItems = list()
+        selectedMsgs = invocation.getSelectedMessages()
+        if selectedMsgs != None and len(selectedMsgs) >= 1:
+            menuItems.append(JMenuItem("Add to ElasticSearch Index", actionPerformed=self.genAddToES(selectedMsgs, invocation.getInputEvent().getComponent())))
+        return menuItems
+
+    def genAddToES(self, msgs, component):
+        def menuAddToES(e):
+            progress = ProgressMonitor(component, "Feeding ElasticSearch", "", 0, len(msgs))
+            i = 0
+            for msg in msgs:
+                if not Burp_onlyResponses or msg.getResponse():
+                    self.saveToES(msg)
+                i += 1
+                progress.setProgress(i)
+            progress.close()
+        return menuAddToES
+
+    ### Interface to ElasticSearch ###
     def saveToES(self, msg):
         httpService = msg.getHttpService()
         doc = DocHTTPRequestResponse(protocol=httpService.getProtocol(), host=httpService.getHost(), port=httpService.getPort())

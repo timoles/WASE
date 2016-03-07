@@ -115,6 +115,6 @@ class DocHTTPRequestResponse(DocType):
         self.response.cookienames.append(cookie['name'])
 
     def save(self, **kwargs):
-        self.timestamp = datetime.now()                 # TODO: adjust timestamp to current timezone
+        self.timestamp = datetime.now()                 # TODO: adjust timestamp to current timezone / TODO: timestamp options: now (as is), request and response
         return super(DocHTTPRequestResponse, self).save(**kwargs)
 
