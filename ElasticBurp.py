@@ -43,11 +43,11 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
         res = connections.create_connection(hosts=[ES_host])
         idx = Index(ES_index)
         idx.doc_type(DocHTTPRequestResponse)
+        DocHTTPRequestResponse.init()
         try:
             idx.create()
         except:
             print("Index already exists")
-        #DocHTTPRequestResponse.init()
 
     ### IHttpListener ###
     def processHttpMessage(self, tool, isRequest, msg):

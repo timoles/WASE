@@ -33,32 +33,32 @@ def parse_header(header):
 
 class DocHTTPRequestResponse(DocType):
     class Meta:
+        #index = "wase"
         doc_type = 'HTTPRequestResponse'
-        all = MetaField(enabld=True)
 
     timestamp = Date()
     protocol = String()
-    host = String()
+    host = String(index='not_analyzed')
     port = Integer()
     request = Object(
             properties = {
                 'method': String(index='not_analyzed'),
-                'url': String(),
-                'requestline': String(),
-                'content_type': String(),
-                'headernames': String(multi=True, index='not_analyzed'),
+                'url': String(fields={'raw': String(index='not_analyzed')}),
+                'requestline': String(fields={'raw': String(index='not_analyzed')}),
+                'content_type': String(fields={'raw': String(index='not_analyzed')}),
+                'headernames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'headers': Nested(
                     properties = {
-                        'name': String(index='not_analyzed'),
-                        'value': String()
+                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'value': String(fields={'raw': String(index='not_analyzed')})
                         }
                     ),
-                'parameternames': String(multi=True, index='not_analyzed'),
+                'parameternames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'parameters': Nested(
                     properties = {
                         'type': String(index='not_analyzed'),
-                        'name': String(index='not_analyzed'),
-                        'value': String()
+                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'value': String(fields={'raw': String(index='not_analyzed')})
                         }
                     ),
                 'body': String(include_in_all=False)
@@ -67,30 +67,31 @@ class DocHTTPRequestResponse(DocType):
     response = Object(
             properties = {
                 'status': Short(),
-                'responseline': String(),
-                'content_type': String(),
-                'inferred_content_type': String(),
-                'headernames': String(multi=True, index='not_analyzed'),
+                'responseline': String(fields={'raw': String(index='not_analyzed')}),
+                'content_type': String(fields={'raw': String(index='not_analyzed')}),
+                'inferred_content_type': String(fields={'raw': String(index='not_analyzed')}),
+                'headernames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'headers': Nested(
                     properties = {
-                        'name': String(index='not_analyzed'),
-                        'value': String()
+                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'value': String(fields={'raw': String(index='not_analyzed')})
                         }
                     ),
-                'cookienames': String(multi=True, index='not_analyzed'),
+                'cookienames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'cookies': Nested(
                     properties = {
-                        'domain': String(),
-                        'expiration': Date(),
-                        'name': String(index='not_analyzed'),
-                        'path': String(),
-                        'value': String()
+                        'domain': String(fields={'raw': String(index='not_analyzed')}),
+                        'expiration': Date(fields={'raw': String(index='not_analyzed')}),
+                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'path': String(fields={'raw': String(index='not_analyzed')}),
+                        'value': String(fields={'raw': String(index='not_analyzed')})
                         }
                     ),
                 'body': String(include_in_all=False),
                 # TODO: implement the following
-                'doctype': String(),
-                'frames': String(multi=True)
+                'doctype': String(fields={'raw': String(index='not_analyzed')}),
+                'frames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'scripts': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 }
             )
 
@@ -113,6 +114,9 @@ class DocHTTPRequestResponse(DocType):
         cookie = { 'name': name, 'value': value, 'domain': domain, 'path': path, 'expiration': expiration }
         self.response.cookies.append(cookie)
         self.response.cookienames.append(cookie['name'])
+
+    def add_response(self, response):
+        self.response.body = response
 
     def save(self, **kwargs):
         self.timestamp = datetime.now()                 # TODO: adjust timestamp to current timezone / TODO: timestamp options: now (as is), request and response
