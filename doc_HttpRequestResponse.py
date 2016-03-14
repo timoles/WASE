@@ -19,6 +19,7 @@
 from elasticsearch_dsl import DocType, String, Integer, Short, Date, Object, Nested, MetaField
 from datetime import datetime
 import re
+from WASEHTMLParser import WASEHTMLParser
 
 reHeader = re.compile("^(.*?):\s*(.*)$")
 
@@ -89,7 +90,7 @@ class DocHTTPRequestResponse(DocType):
                     ),
                 'body': String(include_in_all=False),
                 # TODO: implement the following
-                'doctype': String(fields={'raw': String(index='not_analyzed')}),
+                'doctype': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'frames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'scripts': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 }
@@ -115,10 +116,14 @@ class DocHTTPRequestResponse(DocType):
         self.response.cookies.append(cookie)
         self.response.cookienames.append(cookie['name'])
 
-    def add_response(self, response):
-        self.response.body = response
-
     def save(self, **kwargs):
         self.timestamp = datetime.now()                 # TODO: adjust timestamp to current timezone / TODO: timestamp options: now (as is), request and response
-        return super(DocHTTPRequestResponse, self).save(**kwargs)
+        if (self.response.inferred_content_type and self.response.inferred_content_type == "HTML") or (not self.response.inferred_content_type and "HTML" in self.response.content_type or "html" in self.response.content_type):
+            parser = WASEHTMLParser()
+            parser.feed(self.response.body)
+            parser.close()
 
+            self.doctype = list(parser.doctype)
+            self.frames = list(parser.frames)
+            self.scripts = list(parser.scripts)
+        return super(DocHTTPRequestResponse, self).save(**kwargs)
