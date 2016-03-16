@@ -20,9 +20,12 @@ from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Index
 from doc_HttpRequestResponse import DocHTTPRequestResponse
 from datetime import datetime
+from email.utils import parsedate_tz, mktime_tz
+from tzlocal import get_localzone
 import re
 
-reHeader = re.compile("^(.*?):\s*(.*)$")
+tz = get_localzone()
+reDateHeader = re.compile("^Date:\s*(.*)$", flags=re.IGNORECASE)
 
 ### Config (TODO: move to config tab) ###
 ES_host = "localhost"
@@ -40,6 +43,8 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
         self.callbacks.registerContextMenuFactory(self)
         self.out = callbacks.getStdout()
 
+        self.lastTimestamp = None
+
         res = connections.create_connection(hosts=[ES_host])
         idx = Index(ES_index)
         idx.doc_type(DocHTTPRequestResponse)
@@ -47,7 +52,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
         try:
             idx.create()
         except:
-            print("Index already exists")
+            pass
 
     ### IHttpListener ###
     def processHttpMessage(self, tool, isRequest, msg):
@@ -70,14 +75,14 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
             i = 0
             for msg in msgs:
                 if not Burp_onlyResponses or msg.getResponse():
-                    self.saveToES(msg)
+                    self.saveToES(msg, timeStampFromResponse=True)
                 i += 1
                 progress.setProgress(i)
             progress.close()
         return menuAddToES
 
     ### Interface to ElasticSearch ###
-    def saveToES(self, msg):
+    def saveToES(self, msg, timeStampFromResponse=False):
         httpService = msg.getHttpService()
         doc = DocHTTPRequestResponse(protocol=httpService.getProtocol(), host=httpService.getHost(), port=httpService.getPort())
 
@@ -147,9 +152,13 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
             doc.response.inferred_content_type = iResponse.getInferredMimeType()
 
             headers = iResponse.getHeaders()
+            dateHeader = None
             for header in headers:
                 try:
                     doc.add_response_header(header)
+                    match = reDateHeader.match(header)
+                    if match:
+                        dateHeader = match.group(1)
                 except:
                     doc.response.responseline = header
 
@@ -166,5 +175,13 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
 
             bodyOffset = iResponse.getBodyOffset()
             doc.response.body = response[bodyOffset:].tostring().decode("ascii", "replace")
+
+            if timeStampFromResponse:
+                if dateHeader:
+                    try:
+                        doc.timestamp = datetime.fromtimestamp(mktime_tz(parsedate_tz(dateHeader)), tz) # try to use date from response header "Date"
+                        self.lastTimestamp = doc.timestamp
+                    except:
+                        doc.timestamp = self.lastTimestamp      # fallback: last stored timestamp. Else: now
 
         doc.save()

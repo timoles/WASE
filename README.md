@@ -23,3 +23,4 @@ combines Burp Suite with the search power of ElasticSearch.
   * Set `host: "127.0.0.1"` in `/opt/kibana/config/kibana.yml`.
 3. Load ElasticBurp.py as Python extension in Burp Extender.
   * Jython module folder must be set to WASE source root (for elasticsearch and elasticsearch_dsl)
+  * tzlocal must be installed in the used Jython environment.

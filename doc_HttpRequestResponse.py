@@ -20,11 +20,12 @@ from elasticsearch_dsl import DocType, String, Integer, Short, Date, Object, Nes
 from datetime import datetime
 import re
 from WASEHTMLParser import WASEHTMLParser
+from tzlocal import get_localzone
 
 reHeader = re.compile("^(.*?):\s*(.*)$")
+tz = get_localzone()
 
 def parse_header(header):
-    # BUG: erste Zeile auch enthalten
     # TODO: support for multiline headers
     match = reHeader.search(header)
     if match:
@@ -117,7 +118,8 @@ class DocHTTPRequestResponse(DocType):
         self.response.cookienames.append(cookie['name'])
 
     def save(self, **kwargs):
-        self.timestamp = datetime.now()                 # TODO: adjust timestamp to current timezone / TODO: timestamp options: now (as is), request and response
+        if not self.timestamp:
+            self.timestamp = datetime.now(tz)                 # TODO: timestamp options: now (as is), request and response
         if (self.response.inferred_content_type and self.response.inferred_content_type == "HTML") or (not self.response.inferred_content_type and "HTML" in self.response.content_type or "html" in self.response.content_type):
             parser = WASEHTMLParser()
             parser.feed(self.response.body)
