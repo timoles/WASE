@@ -18,6 +18,18 @@ request.parameternames:csrftoken
 All request without a particular parameter:
 NOT request.parameternames:csrftoken
 
+...only POST requests:
+request.method:POST -request.parameternames.raw:"csrftoken" 
+
+All responses without a doctype definition:
+response.inferred_content_type:html -doctype
+
+...and only 200 responses:
+response.status:200 AND response.inferred_content_type:html -doctype
+
+All responses that were recognized as HTML but declared as something different:
+response.inferred_content_type:html -response.content_type:html
+
 JSON
 ====
 
@@ -45,6 +57,46 @@ All requests without HEADERNAME header:
                     "query": {
                         "match_phrase": {
                             "response.headers.name": "HEADERNAME"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+All requests with HEADERNAME header with value VALUE:
+{
+    "query": {
+        "nested": {
+            "path": "response.headers",
+            "query": {
+                "bool": {
+                    "must_not": {
+                        "match_phrase": {
+                            "response.headers.name": "X-Frame-Options"
+                        },
+                        "match_phrase": {
+                            "response.headers.value": "SAMEORIGIN"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+All requests without HEADERNAME header with value VALUE:
+{
+    "query": {
+        "bool": {
+            "must_not": {
+                "nested": {
+                    "path": "response.headers",
+                    "query": {
+                        "match_phrase": {
+                            "response.headers.name": "HEADERNAME",
+                            "response.headers.value": "VALUE"
                         }
                     }
                 }
