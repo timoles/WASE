@@ -90,10 +90,11 @@ class DocHTTPRequestResponse(DocType):
                         }
                     ),
                 'body': String(include_in_all=False),
-                # TODO: implement the following
                 'doctype': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'frames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'scripts': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'images': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'objects': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 }
             )
 
@@ -125,7 +126,9 @@ class DocHTTPRequestResponse(DocType):
             parser.feed(self.response.body)
             parser.close()
 
-            self.doctype = list(parser.doctype)
-            self.frames = list(parser.frames)
-            self.scripts = list(parser.scripts)
+            self.response.doctype = list(parser.doctype)
+            self.response.frames = list(parser.frames)
+            self.response.scripts = list(parser.scripts)
+            self.response.images = list(parser.images)
+            self.response.objects = list(parser.objects)
         return super(DocHTTPRequestResponse, self).save(**kwargs)
