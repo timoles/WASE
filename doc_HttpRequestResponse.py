@@ -91,10 +91,17 @@ class DocHTTPRequestResponse(DocType):
                     ),
                 'body': String(include_in_all=False),
                 'doctype': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'base': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'stylesheets': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'frames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'scripts': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'links': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'images': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'audio': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'video': String(multi=True, fields={'raw': String(index='not_analyzed')}),
                 'objects': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'formactions': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'extrefs': String(multi=True, fields={'raw': String(index='not_analyzed')}),    # all external references
                 }
             )
 
@@ -127,8 +134,15 @@ class DocHTTPRequestResponse(DocType):
             parser.close()
 
             self.response.doctype = list(parser.doctype)
+            self.response.base = list(parser.base)
+            self.response.stylesheets = list(parser.stylesheets)
             self.response.frames = list(parser.frames)
             self.response.scripts = list(parser.scripts)
+            self.response.links = list(parser.links)
             self.response.images = list(parser.images)
+            self.response.audio = list(parser.audio)
+            self.response.video = list(parser.video)
             self.response.objects = list(parser.objects)
+            self.response.formactions = list(parser.formactions)
+            self.response.extrefs = list(parser.extrefs)
         return super(DocHTTPRequestResponse, self).save(**kwargs)
