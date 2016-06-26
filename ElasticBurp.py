@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from burp import IBurpExtender, IBurpExtenderCallbacks, IHttpListener, IRequestInfo, IParameter, IContextMenuFactory
-from javax.swing import JMenuItem, ProgressMonitor
+from burp import IBurpExtender, IBurpExtenderCallbacks, IHttpListener, IRequestInfo, IParameter, IContextMenuFactory, ITab
+from javax.swing import JMenuItem, ProgressMonitor, JPanel, BoxLayout, JLabel, JTextField, JCheckBox, JButton, Box
+from java.awt import Dimension
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Index
 from doc_HttpRequestResponse import DocHTTPRequestResponse
@@ -29,12 +30,12 @@ reDateHeader = re.compile("^Date:\s*(.*)$", flags=re.IGNORECASE)
 
 ### Config (TODO: move to config tab) ###
 ES_host = "localhost"
-ES_index = "burp"
+ES_index = "wase-burp"
 Burp_Tools = IBurpExtenderCallbacks.TOOL_PROXY
 Burp_onlyResponses = True       # Usually what you want, responses also contain requests
 #########################################
 
-class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
+class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
     def registerExtenderCallbacks(self, callbacks):
         self.callbacks = callbacks
         self.helpers = callbacks.getHelpers()
@@ -44,6 +45,12 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
         self.out = callbacks.getStdout()
 
         self.lastTimestamp = None
+        self.confESHost = ES_host
+        self.confESIndex = ES_index
+        self.confBurpTools = Burp_Tools
+        self.confBurpOnlyResp = Burp_onlyResponses
+
+        self.callbacks.addSuiteTab(self)
 
         res = connections.create_connection(hosts=[ES_host])
         idx = Index(ES_index)
@@ -53,6 +60,81 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory):
             idx.create()
         except:
             pass
+
+    ### ITab ###
+    def getTabCaption(self):
+        return "ElasticBurp"
+
+    def getUiComponent(self):
+        self.panel = JPanel()
+        self.panel.setLayout(BoxLayout(self.panel, BoxLayout.PAGE_AXIS))
+
+        self.uiESHostLine = JPanel()
+        self.uiESHostLine.setLayout(BoxLayout(self.uiESHostLine, BoxLayout.LINE_AXIS))
+        self.uiESHostLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
+        self.uiESHostLine.add(JLabel("ElasticSearch Host: "))
+        self.uiESHost = JTextField(self.confESHost)
+        self.uiESHost.setMaximumSize(self.uiESHost.getPreferredSize())
+        self.uiESHostLine.add(self.uiESHost)
+        self.panel.add(self.uiESHostLine)
+
+        self.uiESIndexLine = JPanel()
+        self.uiESIndexLine.setLayout(BoxLayout(self.uiESIndexLine, BoxLayout.LINE_AXIS))
+        self.uiESIndexLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
+        self.uiESIndexLine.add(JLabel("ElasticSearch Index: "))
+        self.uiESIndex = JTextField(self.confESIndex)
+        self.uiESIndex.setMaximumSize(self.uiESIndex.getPreferredSize())
+        self.uiESIndexLine.add(self.uiESIndex)
+        self.panel.add(self.uiESIndexLine)
+
+        uiToolsLine = JPanel()
+        uiToolsLine.setLayout(BoxLayout(uiToolsLine, BoxLayout.LINE_AXIS))
+        uiToolsLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
+        self.uiCBSuite = JCheckBox("Suite", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SUITE))
+        uiToolsLine.add(self.uiCBSuite)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBTarget = JCheckBox("Target", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_TARGET))
+        uiToolsLine.add(self.uiCBTarget)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBProxy = JCheckBox("Proxy", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_PROXY))
+        uiToolsLine.add(self.uiCBProxy)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBSpider = JCheckBox("Spider", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SPIDER))
+        uiToolsLine.add(self.uiCBSpider)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBScanner = JCheckBox("Scanner", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SCANNER))
+        uiToolsLine.add(self.uiCBScanner)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBIntruder = JCheckBox("Intruder", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_INTRUDER))
+        uiToolsLine.add(self.uiCBIntruder)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBRepeater = JCheckBox("Repeater", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_REPEATER))
+        uiToolsLine.add(self.uiCBRepeater)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBSequencer = JCheckBox("Sequencer", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SEQUENCER))
+        uiToolsLine.add(self.uiCBSequencer)
+        uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
+        self.uiCBExtender = JCheckBox("Extender", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_EXTENDER))
+        uiToolsLine.add(self.uiCBExtender)
+        self.panel.add(uiToolsLine)
+        self.panel.add(Box.createRigidArea(Dimension(0, 10)))
+
+        uiOptionsLine = JPanel()
+        uiOptionsLine.setLayout(BoxLayout(uiOptionsLine, BoxLayout.LINE_AXIS))
+        uiOptionsLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
+        self.uiCBOptRespOnly = JCheckBox("Process only responses (include requests)", self.confBurpOnlyResp)
+        uiOptionsLine.add(self.uiCBOptRespOnly)
+        self.panel.add(uiOptionsLine)
+        self.panel.add(Box.createRigidArea(Dimension(0, 10)))
+
+        uiButtonsLine = JPanel()
+        uiButtonsLine.setLayout(BoxLayout(uiButtonsLine, BoxLayout.LINE_AXIS))
+        uiButtonsLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
+        uiButtonsLine.add(JButton("Apply"))
+        uiButtonsLine.add(JButton("Reset"))
+        self.panel.add(uiButtonsLine)
+
+        return self.panel
 
     ### IHttpListener ###
     def processHttpMessage(self, tool, isRequest, msg):
