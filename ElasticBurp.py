@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from burp import IBurpExtender, IBurpExtenderCallbacks, IHttpListener, IRequestInfo, IParameter, IContextMenuFactory, ITab
-from javax.swing import JMenuItem, ProgressMonitor, JPanel, BoxLayout, JLabel, JTextField, JCheckBox, JButton, Box
+from javax.swing import JMenuItem, ProgressMonitor, JPanel, BoxLayout, JLabel, JTextField, JCheckBox, JButton, Box, JOptionPane
 from java.awt import Dimension
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Index
@@ -51,19 +51,46 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         self.confBurpOnlyResp = Burp_onlyResponses
 
         self.callbacks.addSuiteTab(self)
+        self.applyConfig()
 
-        res = connections.create_connection(hosts=[ES_host])
-        idx = Index(ES_index)
-        idx.doc_type(DocHTTPRequestResponse)
-        DocHTTPRequestResponse.init()
+    def applyConfig(self):
         try:
-            idx.create()
-        except:
-            pass
+            print("Connecting to '%s', index '%s'" % (self.confESHost, self.confESIndex))
+            res = connections.create_connection(hosts=[self.confESHost])
+            idx = Index(self.confESIndex)
+            idx.doc_type(DocHTTPRequestResponse)
+            DocHTTPRequestResponse.init()
+            try:
+                idx.create()
+            except:
+                pass
+        except Exception as e:
+            JOptionPane.showMessageDialog(self.panel, "Error while initializing ElasticSearch: %s" % (str(e)), "Error", JOptionPane.ERROR_MESSAGE)
 
     ### ITab ###
     def getTabCaption(self):
         return "ElasticBurp"
+
+    def applyConfigUI(self, event):
+        self.confESHost = self.uiESHost.getText()
+        self.confESIndex = self.uiESIndex.getText()
+        self.confBurpTools = (self.uiCBSuite.isSelected() and IBurpExtenderCallbacks.TOOL_SUITE) | (self.uiCBTarget.isSelected() and IBurpExtenderCallbacks.TOOL_TARGET) | (self.uiCBProxy.isSelected() and IBurpExtenderCallbacks.TOOL_PROXY) | (self.uiCBSpider.isSelected() and IBurpExtenderCallbacks.TOOL_SPIDER) | (self.uiCBScanner.isSelected() and IBurpExtenderCallbacks.TOOL_SCANNER) | (self.uiCBIntruder.isSelected() and IBurpExtenderCallbacks.TOOL_INTRUDER) | (self.uiCBRepeater.isSelected() and IBurpExtenderCallbacks.TOOL_REPEATER) | (self.uiCBSequencer.isSelected() and IBurpExtenderCallbacks.TOOL_SEQUENCER) | (self.uiCBExtender.isSelected() and IBurpExtenderCallbacks.TOOL_EXTENDER)
+        self.confBurpOnlyResp = self.uiCBOptRespOnly.isSelected()
+        self.applyConfig()
+
+    def resetConfigUI(self, event):
+        self.uiESHost.setText(self.confESHost)
+        self.uiESIndex.setText(self.confESIndex)
+        self.uiCBSuite.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SUITE))
+        self.uiCBTarget.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_TARGET))
+        self.uiCBProxy.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_PROXY))
+        self.uiCBSpider.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SPIDER))
+        self.uiCBScanner.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SCANNER))
+        self.uiCBIntruder.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_INTRUDER))
+        self.uiCBRepeater.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_REPEATER))
+        self.uiCBSequencer.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SEQUENCER))
+        self.uiCBExtender.setSelected(bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_EXTENDER))
+        self.uiCBOptRespOnly.setSelected(self.confBurpOnlyResp)
 
     def getUiComponent(self):
         self.panel = JPanel()
@@ -73,7 +100,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         self.uiESHostLine.setLayout(BoxLayout(self.uiESHostLine, BoxLayout.LINE_AXIS))
         self.uiESHostLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
         self.uiESHostLine.add(JLabel("ElasticSearch Host: "))
-        self.uiESHost = JTextField(self.confESHost)
+        self.uiESHost = JTextField(40)
         self.uiESHost.setMaximumSize(self.uiESHost.getPreferredSize())
         self.uiESHostLine.add(self.uiESHost)
         self.panel.add(self.uiESHostLine)
@@ -82,7 +109,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         self.uiESIndexLine.setLayout(BoxLayout(self.uiESIndexLine, BoxLayout.LINE_AXIS))
         self.uiESIndexLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
         self.uiESIndexLine.add(JLabel("ElasticSearch Index: "))
-        self.uiESIndex = JTextField(self.confESIndex)
+        self.uiESIndex = JTextField(40)
         self.uiESIndex.setMaximumSize(self.uiESIndex.getPreferredSize())
         self.uiESIndexLine.add(self.uiESIndex)
         self.panel.add(self.uiESIndexLine)
@@ -90,31 +117,31 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         uiToolsLine = JPanel()
         uiToolsLine.setLayout(BoxLayout(uiToolsLine, BoxLayout.LINE_AXIS))
         uiToolsLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
-        self.uiCBSuite = JCheckBox("Suite", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SUITE))
+        self.uiCBSuite = JCheckBox("Suite")
         uiToolsLine.add(self.uiCBSuite)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBTarget = JCheckBox("Target", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_TARGET))
+        self.uiCBTarget = JCheckBox("Target")
         uiToolsLine.add(self.uiCBTarget)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBProxy = JCheckBox("Proxy", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_PROXY))
+        self.uiCBProxy = JCheckBox("Proxy")
         uiToolsLine.add(self.uiCBProxy)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBSpider = JCheckBox("Spider", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SPIDER))
+        self.uiCBSpider = JCheckBox("Spider")
         uiToolsLine.add(self.uiCBSpider)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBScanner = JCheckBox("Scanner", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SCANNER))
+        self.uiCBScanner = JCheckBox("Scanner")
         uiToolsLine.add(self.uiCBScanner)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBIntruder = JCheckBox("Intruder", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_INTRUDER))
+        self.uiCBIntruder = JCheckBox("Intruder")
         uiToolsLine.add(self.uiCBIntruder)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBRepeater = JCheckBox("Repeater", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_REPEATER))
+        self.uiCBRepeater = JCheckBox("Repeater")
         uiToolsLine.add(self.uiCBRepeater)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBSequencer = JCheckBox("Sequencer", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_SEQUENCER))
+        self.uiCBSequencer = JCheckBox("Sequencer")
         uiToolsLine.add(self.uiCBSequencer)
         uiToolsLine.add(Box.createRigidArea(Dimension(10, 0)))
-        self.uiCBExtender = JCheckBox("Extender", bool(self.confBurpTools & IBurpExtenderCallbacks.TOOL_EXTENDER))
+        self.uiCBExtender = JCheckBox("Extender")
         uiToolsLine.add(self.uiCBExtender)
         self.panel.add(uiToolsLine)
         self.panel.add(Box.createRigidArea(Dimension(0, 10)))
@@ -122,7 +149,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         uiOptionsLine = JPanel()
         uiOptionsLine.setLayout(BoxLayout(uiOptionsLine, BoxLayout.LINE_AXIS))
         uiOptionsLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
-        self.uiCBOptRespOnly = JCheckBox("Process only responses (include requests)", self.confBurpOnlyResp)
+        self.uiCBOptRespOnly = JCheckBox("Process only responses (include requests)")
         uiOptionsLine.add(self.uiCBOptRespOnly)
         self.panel.add(uiOptionsLine)
         self.panel.add(Box.createRigidArea(Dimension(0, 10)))
@@ -130,15 +157,16 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         uiButtonsLine = JPanel()
         uiButtonsLine.setLayout(BoxLayout(uiButtonsLine, BoxLayout.LINE_AXIS))
         uiButtonsLine.setAlignmentX(JPanel.LEFT_ALIGNMENT)
-        uiButtonsLine.add(JButton("Apply"))
-        uiButtonsLine.add(JButton("Reset"))
+        uiButtonsLine.add(JButton("Apply", actionPerformed=self.applyConfigUI))
+        uiButtonsLine.add(JButton("Reset", actionPerformed=self.resetConfigUI))
         self.panel.add(uiButtonsLine)
+        self.resetConfigUI(None)
 
         return self.panel
 
     ### IHttpListener ###
     def processHttpMessage(self, tool, isRequest, msg):
-        if not tool & Burp_Tools or isRequest and Burp_onlyResponses:
+        if not tool & self.confBurpTools or isRequest and self.confBurpOnlyResp:
             return
 
         self.saveToES(msg)
@@ -167,6 +195,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
     def saveToES(self, msg, timeStampFromResponse=False):
         httpService = msg.getHttpService()
         doc = DocHTTPRequestResponse(protocol=httpService.getProtocol(), host=httpService.getHost(), port=httpService.getPort())
+        doc.meta.index = self.confESIndex
 
         request = msg.getRequest()
         response = msg.getResponse()
