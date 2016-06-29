@@ -65,7 +65,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
             except:
                 pass
         except Exception as e:
-            JOptionPane.showMessageDialog(self.panel, "Error while initializing ElasticSearch: %s" % (str(e)), "Error", JOptionPane.ERROR_MESSAGE)
+            JOptionPane.showMessageDialog(self.panel, "<html><p style='width: 300px'>Error while initializing ElasticSearch: %s</p></html>" % (str(e)), "Error", JOptionPane.ERROR_MESSAGE)
 
     ### ITab ###
     def getTabCaption(self):
