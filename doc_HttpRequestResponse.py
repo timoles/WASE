@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from elasticsearch_dsl import DocType, String, Integer, Short, Date, Object, Nested, MetaField
+from elasticsearch_dsl import DocType, String, Integer, Short, Date, Object, Nested, MetaField, analyzer
 from datetime import datetime
 import re
 from WASEHTMLParser import WASEHTMLParser
@@ -33,6 +33,11 @@ def parse_header(header):
     else:
         raise ValueError("No header matched")
 
+identifierAnalyzer = analyzer("identifier",
+        tokenizer = "keyword",
+        filter = ["lowercase"]
+        )
+
 class DocHTTPRequestResponse(DocType):
     class Meta:
         #index = "wase"
@@ -48,18 +53,18 @@ class DocHTTPRequestResponse(DocType):
                 'url': String(fields={'raw': String(index='not_analyzed')}),
                 'requestline': String(fields={'raw': String(index='not_analyzed')}),
                 'content_type': String(fields={'raw': String(index='not_analyzed')}),
-                'headernames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'headernames': String(analyzer=identifierAnalyzer, multi=True, fields={'raw': String(index='not_analyzed')}),
                 'headers': Nested(
                     properties = {
-                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'name': String(analyzer=identifierAnalyzer, fields={'raw': String(index='not_analyzed')}),
                         'value': String(fields={'raw': String(index='not_analyzed')})
                         }
                     ),
-                'parameternames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'parameternames': String(analyzer=identifierAnalyzer, multi=True, fields={'raw': String(index='not_analyzed')}),
                 'parameters': Nested(
                     properties = {
                         'type': String(index='not_analyzed'),
-                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'name': String(analyzer=identifierAnalyzer, fields={'raw': String(index='not_analyzed')}),
                         'value': String(fields={'raw': String(index='not_analyzed')})
                         }
                     ),
@@ -72,19 +77,19 @@ class DocHTTPRequestResponse(DocType):
                 'responseline': String(fields={'raw': String(index='not_analyzed')}),
                 'content_type': String(fields={'raw': String(index='not_analyzed')}),
                 'inferred_content_type': String(fields={'raw': String(index='not_analyzed')}),
-                'headernames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'headernames': String(analyzer=identifierAnalyzer, multi=True, fields={'raw': String(index='not_analyzed')}),
                 'headers': Nested(
                     properties = {
-                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'name': String(analyzer=identifierAnalyzer, fields={'raw': String(index='not_analyzed')}),
                         'value': String(fields={'raw': String(index='not_analyzed')})
                         }
                     ),
-                'cookienames': String(multi=True, fields={'raw': String(index='not_analyzed')}),
+                'cookienames': String(analyzer=identifierAnalyzer, multi=True, fields={'raw': String(index='not_analyzed')}),
                 'cookies': Nested(
                     properties = {
                         'domain': String(fields={'raw': String(index='not_analyzed')}),
                         'expiration': Date(fields={'raw': String(index='not_analyzed')}),
-                        'name': String(fields={'raw': String(index='not_analyzed')}),
+                        'name': String(analyzer=identifierAnalyzer, fields={'raw': String(index='not_analyzed')}),
                         'path': String(fields={'raw': String(index='not_analyzed')}),
                         'value': String(fields={'raw': String(index='not_analyzed')})
                         }
