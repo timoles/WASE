@@ -11,7 +11,7 @@ def print_debug(*arglist):
 
 ### Query Subcommands ###
 def add_default_aggregation(s):
-    a = A("terms", field="request.url.raw")
+    a = A("terms", field="request.url.raw", size=0)
     s.aggs.bucket("urls", a)
 
 def query_missing(s, field, name, methods=None, responsecodes=None, invert=False):
@@ -34,25 +34,20 @@ def query_missing(s, field, name, methods=None, responsecodes=None, invert=False
             else:
                 s = s.filter("term", ** { 'response.status': rc })
 
-    # aggregate
-    add_default_aggregation(s)
-
     print_debug(s.to_dict())
     return s
 
 def query_missingheader(s, headername, methods=None, responsecodes=None, invert=False):
     s = query_missing(s, 'response.headernames', headername, methods, responsecodes, invert)
-    return s.execute()
+    return s
 
 def query_missingparam(s, paramname, methods=None, responsecodes=None, invert=False):
     s = query_missing(s, 'request.parameternames', paramname, methods, responsecodes, invert)
-    return s.execute()
+    return s
 
 def query(s, q):
     s.query = Q("query_string", query=q)
-    #add_default_aggregation(s)
-    print_debug(s.to_dict())
-    return s.execute()
+    return s
 
 ### Main ###
 argparser = argparse.ArgumentParser(description="WASE Query Tool")
@@ -86,14 +81,22 @@ s = Search(using=es).index(args.index)
 r = None
 
 if args.cmd == "missingheader":
-    r = query_missingheader(s, args.header, args.method, args.responsecode, args.invert)
+    s = query_missingheader(s, args.header, args.method, args.responsecode, args.invert)
 elif args.cmd == "missingparameter":
-    r = query_missingparam(s, args.parameter, args.method, args.responsecode, args.invert)
+    s = query_missingparam(s, args.parameter, args.method, args.responsecode, args.invert)
 elif args.cmd == "search":
-    r = query(s, " ".join(args.query))
+    s = query(s, " ".join(args.query))
 else:
     argparser.print_help()
     sys.exit(1)
+
+if args.fields:
+    print_debug(s.to_dict())
+    r = s.scan()
+else:
+    add_default_aggregation(s)
+    print_debug(s.to_dict())
+    r = s.execute()
 
 if not r:
     print("No matches!")
