@@ -64,21 +64,27 @@ def query_missingparam(s, paramname, methods=None, responsecodes=None, invert=Fa
     s = query_missing(s, 'request.parameternames', paramname, methods, responsecodes, invert)
     return s
 
-def query_headervals(s, headername):
-    # match documents where given header name is present
-    s.query = Q("match", ** { "response.headernames": headername })
+def query_vals(s, field, name):
+    # match documents where given field value name is present
+    s.query = Q()
 
-    # 1. descent into response.headers
+    # 1. descent into response.headers/request.parameters
     # 2. filter given header
-    # 3. aggregate header values
+    # 3. aggregate values
     # 4. jump back into main document
     # 5. aggregate URLs
-    s.aggs.bucket("response_headers", "nested", path="response.headers")\
-            .bucket("header", "filter", Q("match", ** { "response.headers.name": headername }))\
-            .bucket("values", "terms", field="response.headers.value.raw", size=0)\
+    s.aggs.bucket("field", "nested", path=field)\
+            .bucket("valuefilter", "filter", Q("match", ** { field + ".name": name }))\
+            .bucket("values", "terms", field=field + ".value.raw", size=0)\
             .bucket("main", "reverse_nested")\
             .bucket("urls", "terms", field="request.url.raw", size=0)
     return s
+
+def query_headervals(s, headername):
+    return query_vals(s, "response.headers", headername)
+
+def query_parametervals(s, paramname):
+    return query_vals(s, "request.parameters", paramname)
 
 def query(s, q):
     s.query = Q("query_string", query=q)
@@ -111,6 +117,11 @@ argparser_headervals.add_argument("--urls", "-u", action="store_true", help="Lis
 argparser_headervals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
 argparser_headervals.add_argument("header", help="Name of the response header")
 
+argparser_headervals = subargparsers.add_parser("parametervalues", help="Show all request parameter values and the URLs where the value was set")
+argparser_headervals.add_argument("--urls", "-u", action="store_true", help="List URLs where parameter value is set")
+argparser_headervals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
+argparser_headervals.add_argument("parameter", help="Name of the request parameter")
+
 argparser_search = subargparsers.add_parser("search", help="Make arbitrary queries")
 argparser_search.add_argument("query", nargs="*", default=["*"], help="Query string")
 
@@ -130,6 +141,9 @@ elif args.cmd == "missingparameter":
     querytype = QUERY_SEARCH
 elif args.cmd == "headervalues":
     s = query_headervals(s, args.header)
+    querytype = QUERY_VALUES
+elif args.cmd == "parametervalues":
+    s = query_parametervals(s, args.parameter)
     querytype = QUERY_VALUES
 elif args.cmd == "search":
     s = query(s, " ".join(args.query))
@@ -173,7 +187,7 @@ elif querytype == QUERY_VALUES:
     print_debug(s.to_dict())
     r = s.execute()
 
-    for hv in r.aggregations.response_headers.header.values.buckets:
+    for hv in r.aggregations.field.valuefilter.values.buckets:
         print(hv.key)
         if args.urls:
             urlcnt = -1
