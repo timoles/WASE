@@ -134,11 +134,7 @@ if querytype == QUERY_SEARCH:
         add_default_aggregation(s)
         print_debug(s.to_dict())
         r = s.execute()
-elif querytype == QUERY_VALUES:
-    print_debug(s.to_dict())
-    r = s.execute()
 
-if querytype == QUERY_SEARCH:
     if not r:
         print("No matches!")
         sys.exit(0)
@@ -160,6 +156,9 @@ if querytype == QUERY_SEARCH:
         for d in r.aggregations.urls.buckets:
             print(d['key'])
 elif querytype == QUERY_VALUES:
+    print_debug(s.to_dict())
+    r = s.execute()
+
     for hv in r.aggregations.response_headers.header.values.buckets:
         print(hv.key)
         if args.urls:
