@@ -3,6 +3,7 @@
 import argparse
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, A
+from elasticsearch_dsl.query import Wildcard
 import sys
 
 ### Constants ###
@@ -15,6 +16,16 @@ QUERY_VALUES = 2
 def add_default_aggregation(s):
     a = A("terms", field="request.url.raw", size=0)
     s.aggs.bucket("urls", a)
+
+def add_domain_filter(s):
+# add domain filters
+    if args.domain:
+        domain_filter = []
+        for domain in args.domain:
+            domain_filter.append(Wildcard(** { "host": domain }))
+        return s.filter("bool", should=domain_filter)
+    else:
+        return s
 
 def print_debug(*arglist):
     if args.debug:
@@ -77,8 +88,9 @@ def query(s, q):
 argparser = argparse.ArgumentParser(description="WASE Query Tool")
 argparser.add_argument("--server", "-s", action="append", default="localhost", help="ElasticSearch server")
 argparser.add_argument("--index", "-i", default="wase-*", help="ElasticSearch index pattern to query")
-argparser.add_argument("--fields", "-f", action="append", help="Add fields to output. Prints full result instead of aggregated URLs.")
-argparser.add_argument("--debug", "-d", action="store_true", help="Debugging output")
+argparser.add_argument("--field", "-f", action="append", help="Add fields to output. Prints full result instead of aggregated URLs.")
+argparser.add_argument("--domain", "-d", action="append", help="Restrict search to domain. Wildcards allowed. Can be used multiple times.")
+argparser.add_argument("--debug", "-D", action="store_true", help="Debugging output")
 subargparsers = argparser.add_subparsers(title="Query Commands", dest="cmd")
 
 argparser_missingheader = subargparsers.add_parser("missingheader", help="Search for URLs which responses are missing a header")
@@ -126,8 +138,10 @@ else:
     argparser.print_help()
     sys.exit(1)
 
+s = add_domain_filter(s)
+
 if querytype == QUERY_SEARCH:
-    if args.fields:
+    if args.field:
         print_debug(s.to_dict())
         r = s.scan()
     else:
@@ -138,10 +152,10 @@ if querytype == QUERY_SEARCH:
     if not r:
         print("No matches!")
         sys.exit(0)
-    if args.fields:
+    if args.field:
         for d in r:
             print(d['request']['url'])
-            for f in args.fields:
+            for f in args.field:
                 print(f, end=": ")
                 fl = f.split(".", 1)
                 try:
