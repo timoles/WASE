@@ -64,10 +64,14 @@ def query_missingparam(s, paramname, methods=None, responsecodes=None, invert=Fa
     s = query_missing(s, 'request.parameternames', paramname, methods, responsecodes, invert)
     return s
 
-def query_vals(s, field, name, values):
+def query_vals(s, field, name, values, invert):
     # match documents where given field value name is present, if required
     if values:
-        s.query = Q("nested", path=field, query=Q("wildcard", ** { field + ".value.raw": values }))
+        q = Q("nested", path=field, query=Q("wildcard", ** { field + ".value.raw": values }))
+        if invert:
+            s.query = ~q
+        else:
+            s.query = q
     else:
         s.query = Q()
 
@@ -83,11 +87,11 @@ def query_vals(s, field, name, values):
             .bucket("urls", "terms", field="request.url.raw", size=0)
     return s
 
-def query_headervals(s, headername, values=None):
-    return query_vals(s, "response.headers", headername, values)
+def query_headervals(s, headername, values=None, invert=False):
+    return query_vals(s, "response.headers", headername, values, invert)
 
-def query_parametervals(s, paramname, values=None):
-    return query_vals(s, "request.parameters", paramname, values)
+def query_parametervals(s, paramname, values=None, invert=False):
+    return query_vals(s, "request.parameters", paramname, values, invert)
 
 def query(s, q):
     s.query = Q("query_string", query=q)
@@ -104,13 +108,13 @@ subargparsers = argparser.add_subparsers(title="Query Commands", dest="cmd")
 
 argparser_missingheader = subargparsers.add_parser("missingheader", help="Search for URLs which responses are missing a header")
 argparser_missingheader.add_argument("header", help="Name of the header")
-argparser_missingheader.add_argument("--invert", "-n", action="store_true", help="Invert result, list all URLs where header is set")
+argparser_missingheader.add_argument("--invert", "-i", action="store_true", help="Invert result, list all URLs where header is set")
 argparser_missingheader.add_argument("--method", "-m", action="append", help="Restrict search to given methods")
 argparser_missingheader.add_argument("--responsecode", "-c", action="append", help="Restrict search to responses with the given codes. Can be a single code (e.g. 200), a range (200-299) or wildcard (2*)")
 
 argparser_missingparam = subargparsers.add_parser("missingparameter", help="Search for URLs where the requests are missing a parameter with the given name")
 argparser_missingparam.add_argument("parameter", help="Name of parameter to search")
-argparser_missingparam.add_argument("--invert", "-n", action="store_true", help="Invert result, list all URLs where header is set")
+argparser_missingparam.add_argument("--invert", "-i", action="store_true", help="Invert result, list all URLs where header is set")
 argparser_missingparam.add_argument("--method", "-m", action="append", help="Restrict search to given methods")
 argparser_missingparam.add_argument("--responsecode", "-c", action="append", help="Restrict search to responses with the given codes. Can be a single code (e.g. 200), a range (200-299) or wildcard (2*)")
 #argparser_missingparam.add_argument("--type", "-t", choices=["url", "body", "cookie", "xml", "xmlattr", "multipartattr", "json", "unknown"], help="Restrict search to given request parameter type")
@@ -119,12 +123,14 @@ argparser_headervals = subargparsers.add_parser("headervalues", help="Show all r
 argparser_headervals.add_argument("--urls", "-u", action="store_true", help="List URLs where header value is set")
 argparser_headervals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
 argparser_headervals.add_argument("--values", "-v", help="Restrict to values matching the given pattern (wildcards allowed)")
+argparser_headervals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
 argparser_headervals.add_argument("header", help="Name of the response header")
 
 argparser_paramvals = subargparsers.add_parser("parametervalues", help="Show all request parameter values and the URLs where the value was set")
 argparser_paramvals.add_argument("--urls", "-u", action="store_true", help="List URLs where parameter value is set")
 argparser_paramvals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
 argparser_paramvals.add_argument("--values", "-v", help="Restrict to values matching the given pattern (wildcards allowed)")
+argparser_paramvals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
 argparser_paramvals.add_argument("parameter", help="Name of the request parameter")
 
 argparser_search = subargparsers.add_parser("search", help="Make arbitrary queries")
@@ -145,10 +151,10 @@ elif args.cmd == "missingparameter":
     s = query_missingparam(s, args.parameter, args.method, args.responsecode, args.invert)
     querytype = QUERY_SEARCH
 elif args.cmd == "headervalues":
-    s = query_headervals(s, args.header, args.values)
+    s = query_headervals(s, args.header, args.values, args.invert)
     querytype = QUERY_VALUES
 elif args.cmd == "parametervalues":
-    s = query_parametervals(s, args.parameter, args.values)
+    s = query_parametervals(s, args.parameter, args.values, args.invert)
     querytype = QUERY_VALUES
 elif args.cmd == "search":
     s = query(s, " ".join(args.query))
