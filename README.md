@@ -25,6 +25,10 @@ combines Burp Suite with the search power of ElasticSearch.
   * Jython module folder must be set to WASE source root (for doc_HttpRequestResponse)
   * tzlocal, elasticsearch and elasticsearch_dsl must be installed in the used Jython/Python environment.
 
+### Usage
+
+See [this blog article](https://patzke.org/an-introduction-to-wase-and-elasticburp.html) for usage examples.
+
 ## WASEQuery
 
 Search ElasticSearch indices created by WASE for
@@ -35,4 +39,6 @@ Search ElasticSearch indices created by WASE for
 
 ...or do arbitrary search queries.
 
-Invoke WASEQuery.py for help message.
+Invoke WASEQuery.py for help message. [This blog
+article](https://patzke.org/analyzing-web-application-test-data-with-wasequery.html) shows some examples for usage of
+WASEQuery.
