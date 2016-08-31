@@ -93,6 +93,9 @@ def query_headervals(s, headername, values=None, invert=False):
 def query_parametervals(s, paramname, values=None, invert=False):
     return query_vals(s, "request.parameters", paramname, values, invert)
 
+def query_cookievals(s, cookiename, values=None, invert=False):
+    return query_vals(s, "response.cookies", cookiename, values, invert)
+
 def query(s, q):
     s.query = Q("query_string", query=q)
     return s
@@ -126,6 +129,13 @@ argparser_headervals.add_argument("--values", "-v", help="Restrict to values mat
 argparser_headervals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
 argparser_headervals.add_argument("header", help="Name of the response header")
 
+argparser_cookievals = subargparsers.add_parser("cookievalues", help="Show all cookie values and the URLs where the value was set")
+argparser_cookievals.add_argument("--urls", "-u", action="store_true", help="List URLs where header value is set")
+argparser_cookievals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
+argparser_cookievals.add_argument("--values", "-v", help="Restrict to values matching the given pattern (wildcards allowed)")
+argparser_cookievals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
+argparser_cookievals.add_argument("cookie", help="Name of the cookie")
+
 argparser_paramvals = subargparsers.add_parser("parametervalues", help="Show all request parameter values and the URLs where the value was set")
 argparser_paramvals.add_argument("--urls", "-u", action="store_true", help="List URLs where parameter value is set")
 argparser_paramvals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
@@ -152,6 +162,9 @@ elif args.cmd == "missingparameter":
     querytype = QUERY_SEARCH
 elif args.cmd == "headervalues":
     s = query_headervals(s, args.header, args.values, args.invert)
+    querytype = QUERY_VALUES
+elif args.cmd == "cookievalues":
+    s = query_cookievals(s, args.cookie, args.values, args.invert)
     querytype = QUERY_VALUES
 elif args.cmd == "parametervalues":
     s = query_parametervals(s, args.parameter, args.values, args.invert)
