@@ -120,6 +120,14 @@ class DocHTTPRequestResponse(DocType):
         self.response.headers.append(parsed)
         self.response.headernames.append(parsed['name'])
 
+    def add_parsed_request_header(self, name, value):
+        self.request.headers.append({"name": name, "value": value})
+        self.request.headernames.append(name)
+
+    def add_parsed_response_header(self, name, value):
+        self.response.headers.append({"name": name, "value": value})
+        self.response.headernames.append(name)
+
     def add_request_parameter(self, typename, name, value):
         param = { 'type': typename, 'name': name, 'value': value }
         self.request.parameters.append(param)
@@ -133,7 +141,7 @@ class DocHTTPRequestResponse(DocType):
     def save(self, **kwargs):
         if not self.timestamp:
             self.timestamp = datetime.now(tz)                 # TODO: timestamp options: now (as is), request and response
-        if (self.response.inferred_content_type and self.response.inferred_content_type == "HTML") or (not self.response.inferred_content_type and "HTML" in self.response.content_type or "html" in self.response.content_type):
+        if self.response.body and (self.response.inferred_content_type and self.response.inferred_content_type == "HTML") or (not self.response.inferred_content_type and "HTML" in self.response.content_type or "html" in self.response.content_type):
             parser = WASEHTMLParser()
             parser.feed(self.response.body)
             parser.close()
