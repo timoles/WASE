@@ -87,11 +87,17 @@ def query_vals(s, field, name, values, invert):
             .bucket("urls", "terms", field="request.url.raw", size=0)
     return s
 
-def query_headervals(s, headername, values=None, invert=False):
+def query_responseheadervals(s, headername, values=None, invert=False):
     return query_vals(s, "response.headers", headername, values, invert)
+
+def query_requestheadervals(s, headername, values=None, invert=False):
+    return query_vals(s, "request.headers", headername, values, invert)
 
 def query_parametervals(s, paramname, values=None, invert=False):
     return query_vals(s, "request.parameters", paramname, values, invert)
+
+def query_cookievals(s, cookiename, values=None, invert=False):
+    return query_vals(s, "response.cookies", cookiename, values, invert)
 
 def query(s, q):
     s.query = Q("query_string", query=q)
@@ -119,12 +125,26 @@ argparser_missingparam.add_argument("--method", "-m", action="append", help="Res
 argparser_missingparam.add_argument("--responsecode", "-c", action="append", help="Restrict search to responses with the given codes. Can be a single code (e.g. 200), a range (200-299) or wildcard (2*)")
 #argparser_missingparam.add_argument("--type", "-t", choices=["url", "body", "cookie", "xml", "xmlattr", "multipartattr", "json", "unknown"], help="Restrict search to given request parameter type")
 
-argparser_headervals = subargparsers.add_parser("headervalues", help="Show all response header values and the URLs where the value was set")
-argparser_headervals.add_argument("--urls", "-u", action="store_true", help="List URLs where header value is set")
-argparser_headervals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
-argparser_headervals.add_argument("--values", "-v", help="Restrict to values matching the given pattern (wildcards allowed)")
-argparser_headervals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
-argparser_headervals.add_argument("header", help="Name of the response header")
+argparser_responseheadervals = subargparsers.add_parser("responseheadervalues", help="Show all response header values and the URLs where the value was set")
+argparser_responseheadervals.add_argument("--urls", "-u", action="store_true", help="List URLs where header value is set")
+argparser_responseheadervals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
+argparser_responseheadervals.add_argument("--values", "-v", help="Restrict to values matching the given pattern (wildcards allowed)")
+argparser_responseheadervals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
+argparser_responseheadervals.add_argument("header", help="Name of the response header")
+
+argparser_requestheadervals = subargparsers.add_parser("requestheadervalues", help="Show all request header values and the URLs where the value was set")
+argparser_requestheadervals.add_argument("--urls", "-u", action="store_true", help="List URLs where header value is set")
+argparser_requestheadervals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
+argparser_requestheadervals.add_argument("--values", "-v", help="Restrict to values matching the given pattern (wildcards allowed)")
+argparser_requestheadervals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
+argparser_requestheadervals.add_argument("header", help="Name of the response header")
+
+argparser_cookievals = subargparsers.add_parser("cookievalues", help="Show all cookie values and the URLs where the value was set")
+argparser_cookievals.add_argument("--urls", "-u", action="store_true", help="List URLs where header value is set")
+argparser_cookievals.add_argument("--max-urls", "-n", type=int, default=0, help="Maximum number of listed URLs")
+argparser_cookievals.add_argument("--values", "-v", help="Restrict to values matching the given pattern (wildcards allowed)")
+argparser_cookievals.add_argument("--invert", "-i", action="store_true", help="Invert values search")
+argparser_cookievals.add_argument("cookie", help="Name of the cookie")
 
 argparser_paramvals = subargparsers.add_parser("parametervalues", help="Show all request parameter values and the URLs where the value was set")
 argparser_paramvals.add_argument("--urls", "-u", action="store_true", help="List URLs where parameter value is set")
@@ -150,8 +170,14 @@ if args.cmd == "missingheader":
 elif args.cmd == "missingparameter":
     s = query_missingparam(s, args.parameter, args.method, args.responsecode, args.invert)
     querytype = QUERY_SEARCH
-elif args.cmd == "headervalues":
-    s = query_headervals(s, args.header, args.values, args.invert)
+elif args.cmd == "responseheadervalues":
+    s = query_responseheadervals(s, args.header, args.values, args.invert)
+    querytype = QUERY_VALUES
+elif args.cmd == "requestheadervalues":
+    s = query_requestheadervals(s, args.header, args.values, args.invert)
+    querytype = QUERY_VALUES
+elif args.cmd == "cookievalues":
+    s = query_cookievals(s, args.cookie, args.values, args.invert)
     querytype = QUERY_VALUES
 elif args.cmd == "parametervalues":
     s = query_parametervals(s, args.parameter, args.values, args.invert)
