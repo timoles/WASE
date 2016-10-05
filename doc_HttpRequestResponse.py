@@ -138,10 +138,10 @@ class DocHTTPRequestResponse(DocType):
         self.response.cookies.append(cookie)
         self.response.cookienames.append(cookie['name'])
 
-    def save(self, **kwargs):
+    def save(self, storeResponseBody=True, **kwargs):
         if not self.timestamp:
             self.timestamp = datetime.now(tz)                 # TODO: timestamp options: now (as is), request and response
-        if self.response.body and (self.response.inferred_content_type and self.response.inferred_content_type == "HTML") or (not self.response.inferred_content_type and "HTML" in self.response.content_type or "html" in self.response.content_type):
+        if self.response.body and ((self.response.inferred_content_type and self.response.inferred_content_type == "HTML") or (not self.response.inferred_content_type and "HTML" in self.response.content_type or "html" in self.response.content_type)):
             parser = WASEHTMLParser()
             parser.feed(self.response.body)
             parser.close()
@@ -158,4 +158,7 @@ class DocHTTPRequestResponse(DocType):
             self.response.objects = list(parser.objects)
             self.response.formactions = list(parser.formactions)
             self.response.extrefs = list(parser.extrefs)
+
+        if not storeResponseBody:
+            self.response.body = None
         return super(DocHTTPRequestResponse, self).save(**kwargs)

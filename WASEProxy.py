@@ -13,6 +13,7 @@ from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Index
 
 args = None
+storeResponseBody = True
 reContentType = re.compile("^(.*?)(?:$|\s*;)")
 
 class WASEProxyHandler(ProxyHandler):
@@ -100,11 +101,10 @@ class WASEProxyHandler(ProxyHandler):
                 pass
 
         # body
-        if not args.no_response_body:
-            bodybytes = r.read()
-            self.doc.response.body = bodybytes.decode(args.charset, args.encodingerrors)
+        bodybytes = r.read()
+        self.doc.response.body = bodybytes.decode(args.charset, args.encodingerrors)
 
-        self.doc.save()
+        self.doc.save(storeResponseBody)
         return data
 
 # code copied from http://stackoverflow.com/questions/24728088/python-parse-http-response-string
@@ -138,6 +138,9 @@ argparser.add_argument("--charset", "-c", default="utf-8", help="Character set u
 argparser.add_argument("--encodingerrors", "-E", default="ignore", choices=["ignore", "replace", "strict"], help="Behavior when encoding errors occur, must be ignore, replace or strict (default: %(default)s)")
 argparser.add_argument("--verbose", "-v", action="store_true", help="Be verbose")
 args = argparser.parse_args()
+
+if args.no_response_body:
+    storeResponseBody = False
 
 # Initialize ES connection and index
 res = connections.create_connection(hosts=[args.elasticsearch])
