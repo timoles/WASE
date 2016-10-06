@@ -104,7 +104,10 @@ class WASEProxyHandler(ProxyHandler):
         bodybytes = r.read()
         self.doc.response.body = bodybytes.decode(args.charset, args.encodingerrors)
 
-        self.doc.save(storeResponseBody)
+        try:
+            self.doc.save(storeResponseBody)
+        except:
+            pass
         return data
 
 # code copied from http://stackoverflow.com/questions/24728088/python-parse-http-response-string
