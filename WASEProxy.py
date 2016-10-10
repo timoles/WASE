@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # Intercepting Proxy that feeds HTTP(S) requests/responses into ElasticSearch based on pymiproxy and WASE
 
-from miproxy.proxy import ProxyHandler, AsyncMitmProxy
+from miproxy.proxy import ProxyHandler, MitmProxy, AsyncMitmProxy
 import argparse
 from httplib import HTTPResponse
 from Cookie import SimpleCookie
 from doc_HttpRequestResponse import DocHTTPRequestResponse
 from StringIO import StringIO
+from SocketServer import ForkingMixIn
 from BaseHTTPServer import BaseHTTPRequestHandler
 import re
 from elasticsearch_dsl.connections import connections
@@ -16,9 +17,22 @@ args = None
 storeResponseBody = True
 reContentType = re.compile("^(.*?)(?:$|\s*;)")
 
+class ForkingAsyncMitmProxy(ForkingMixIn, MitmProxy):
+    pass
+
 class WASEProxyHandler(ProxyHandler):
     """Intercepts HTTP(S) requests/responses, extracts data and feeds ElasticSearch"""
     def mitm_request(self, data):
+	# Initialize ES connection and index
+	res = connections.create_connection(hosts=[args.elasticsearch])
+	idx = Index(args.index)
+	idx.doc_type(DocHTTPRequestResponse)
+	try:
+	    DocHTTPRequestResponse.init()
+	    idx.create()
+	except:
+	    pass
+
         r = HTTPRequest(data)
 
         # determine url
@@ -52,14 +66,14 @@ class WASEProxyHandler(ProxyHandler):
 
         # response line
         self.doc.response.status = r.status
-        self.doc.response.responseline = lines[0]
+        self.doc.response.responseline = lines[0].decode(args.charset, args.encodingerrors)
 
         # headers
         ct = ""
         cookies = list()
         for header in r.getheaders():
-            name = header[0]
-            value = header[1]
+            name = header[0].decode(args.charset, args.encodingerrors)
+            value = header[1].decode(args.charset, args.encodingerrors)
             self.doc.add_parsed_response_header(name, value)
             if name == "content-type":
                 ct = value
@@ -104,10 +118,7 @@ class WASEProxyHandler(ProxyHandler):
         bodybytes = r.read()
         self.doc.response.body = bodybytes.decode(args.charset, args.encodingerrors)
 
-        try:
-            self.doc.save(storeResponseBody)
-        except:
-            pass
+        self.doc.save(storeResponseBody)
         return data
 
 # code copied from http://stackoverflow.com/questions/24728088/python-parse-http-response-string
@@ -145,18 +156,8 @@ args = argparser.parse_args()
 if args.no_response_body:
     storeResponseBody = False
 
-# Initialize ES connection and index
-res = connections.create_connection(hosts=[args.elasticsearch])
-idx = Index(args.index)
-idx.doc_type(DocHTTPRequestResponse)
-try:
-    DocHTTPRequestResponse.init()
-    idx.create()
-except:
-    pass
-
 # run proxy
-proxy = AsyncMitmProxy(RequestHandlerClass=WASEProxyHandler, server_address=(args.listenaddr, args.port))
+proxy = ForkingAsyncMitmProxy(RequestHandlerClass=WASEProxyHandler, server_address=(args.listenaddr, args.port))
 try:
     proxy.serve_forever()
 except KeyboardInterrupt:
