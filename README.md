@@ -29,6 +29,10 @@ combines Burp Suite with the search power of ElasticSearch.
 
 See [this blog article](https://patzke.org/an-introduction-to-wase-and-elasticburp.html) for usage examples.
 
+## WASEProxy
+
+A generic intercepting HTTP(S) proxy server that stores extracted data into an ElasticSearch index.
+
 ## WASEQuery
 
 Search ElasticSearch indices created by WASE for
