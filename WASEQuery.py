@@ -105,7 +105,7 @@ def query(s, q):
 
 ### Main ###
 argparser = argparse.ArgumentParser(description="WASE Query Tool")
-argparser.add_argument("--server", "-s", action="append", default="localhost", help="ElasticSearch server")
+argparser.add_argument("--server", "-s", default="localhost", help="ElasticSearch server")
 argparser.add_argument("--index", "-i", default="wase-*", help="ElasticSearch index pattern to query")
 argparser.add_argument("--field", "-f", action="append", help="Add fields to output. Prints full result instead of aggregated URLs.")
 argparser.add_argument("--domain", "-d", action="append", help="Restrict search to domain. Wildcards allowed. Can be used multiple times.")
