@@ -6,6 +6,6 @@ SerialVersion: 0
 MinPlatformVersion: 0
 ProOnly: False
 Author: Thomas Patzke
-ShortDescription: Stores requests/responses from selected tools into an ElasticSearch index including metadata like headers and parameters
+ShortDescription: Stores requests/responses in an ElasticSearch index.
 EntryPoint: ElasticBurp.py
 BuildCommand: 
