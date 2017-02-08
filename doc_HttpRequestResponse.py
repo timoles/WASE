@@ -43,7 +43,7 @@ class DocHTTPRequestResponse(DocType):
         doc_type = 'HTTPRequestResponse'
 
     timestamp = Date()
-    protocol = Text()
+    protocol = Keyword()
     host = Keyword()
     port = Integer()
     request = Object(
