@@ -2,10 +2,9 @@ Uuid: 67f5c31f93d04ad3a3b0a1808b3648fa
 ExtensionType: 2
 Name: ElasticBurp
 ScreenVersion: 1.0
-SerialVersion: 0
+SerialVersion: 1
 MinPlatformVersion: 0
 ProOnly: False
 Author: Thomas Patzke
 ShortDescription: Stores requests/responses in an ElasticSearch index.
 EntryPoint: ElasticBurp.py
-BuildCommand: 
