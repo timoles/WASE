@@ -40,7 +40,6 @@ identifierAnalyzer = analyzer("identifier",
 
 class DocHTTPRequestResponse(DocType):
     class Meta:
-        #index = "wase"
         doc_type = 'HTTPRequestResponse'
 
     timestamp = Date()
