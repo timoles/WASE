@@ -46,7 +46,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
 
         self.lastTimestamp = None
         self.confESHost = ES_host
-        self.confESIndex = ES_index
+        self.confESIndex = self.callbacks.loadExtensionSetting("elasticburp.index") or ES_index
         self.confBurpTools = Burp_Tools
         self.confBurpOnlyResp = Burp_onlyResponses
 
@@ -63,6 +63,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
                 self.idx.open()
             else:
                 self.idx.create()
+            self.callbacks.saveExtensionSetting("elasticburp.index", self.confESIndex)
         except Exception as e:
             JOptionPane.showMessageDialog(self.panel, "<html><p style='width: 300px'>Error while initializing ElasticSearch: %s</p></html>" % (str(e)), "Error", JOptionPane.ERROR_MESSAGE)
 
