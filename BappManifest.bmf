@@ -4,7 +4,7 @@ Name: ElasticBurp
 RepoName: elastic-burp
 ScreenVersion: 1.1
 SerialVersion: 4
-MinPlatformVersion: 0
+MinPlatformVersion: 2
 ProOnly: False
 Author: Thomas Patzke
 ShortDescription: Stores requests/responses in an ElasticSearch index.
