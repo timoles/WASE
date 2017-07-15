@@ -79,7 +79,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         #self.idx.close()
         self.confESHost = self.uiESHost.getText()
         self.confESIndex = self.uiESIndex.getText()
-        self.confBurpTools = (self.uiCBSuite.isSelected() and IBurpExtenderCallbacks.TOOL_SUITE) | (self.uiCBTarget.isSelected() and IBurpExtenderCallbacks.TOOL_TARGET) | (self.uiCBProxy.isSelected() and IBurpExtenderCallbacks.TOOL_PROXY) | (self.uiCBSpider.isSelected() and IBurpExtenderCallbacks.TOOL_SPIDER) | (self.uiCBScanner.isSelected() and IBurpExtenderCallbacks.TOOL_SCANNER) | (self.uiCBIntruder.isSelected() and IBurpExtenderCallbacks.TOOL_INTRUDER) | (self.uiCBRepeater.isSelected() and IBurpExtenderCallbacks.TOOL_REPEATER) | (self.uiCBSequencer.isSelected() and IBurpExtenderCallbacks.TOOL_SEQUENCER) | (self.uiCBExtender.isSelected() and IBurpExtenderCallbacks.TOOL_EXTENDER)
+        self.confBurpTools = int((self.uiCBSuite.isSelected() and IBurpExtenderCallbacks.TOOL_SUITE) | (self.uiCBTarget.isSelected() and IBurpExtenderCallbacks.TOOL_TARGET) | (self.uiCBProxy.isSelected() and IBurpExtenderCallbacks.TOOL_PROXY) | (self.uiCBSpider.isSelected() and IBurpExtenderCallbacks.TOOL_SPIDER) | (self.uiCBScanner.isSelected() and IBurpExtenderCallbacks.TOOL_SCANNER) | (self.uiCBIntruder.isSelected() and IBurpExtenderCallbacks.TOOL_INTRUDER) | (self.uiCBRepeater.isSelected() and IBurpExtenderCallbacks.TOOL_REPEATER) | (self.uiCBSequencer.isSelected() and IBurpExtenderCallbacks.TOOL_SEQUENCER) | (self.uiCBExtender.isSelected() and IBurpExtenderCallbacks.TOOL_EXTENDER))
         self.confBurpOnlyResp = self.uiCBOptRespOnly.isSelected()
         self.applyConfig()
 
