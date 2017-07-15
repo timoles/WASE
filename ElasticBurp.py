@@ -49,7 +49,13 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         self.confESHost = self.callbacks.loadExtensionSetting("elasticburp.host") or ES_host
         self.confESIndex = self.callbacks.loadExtensionSetting("elasticburp.index") or ES_index
         self.confBurpTools = int(self.callbacks.loadExtensionSetting("elasticburp.tools") or Burp_Tools)
-        self.confBurpOnlyResp = bool(self.callbacks.loadExtensionSetting("elasticburp.onlyresp") or Burp_onlyResponses)
+        saved_onlyresp = self.callbacks.loadExtensionSetting("elasticburp.onlyresp") 
+        if saved_onlyresp == "True":
+            self.confBurpOnlyResp = True
+        elif saved_onlyresp == "False":
+            self.confBurpOnlyResp = False
+        else:
+            self.confBurpOnlyResp = bool(int(saved_onlyresp or Burp_onlyResponses))
 
         self.callbacks.addSuiteTab(self)
         self.applyConfig()
@@ -67,7 +73,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
             self.callbacks.saveExtensionSetting("elasticburp.host", self.confESHost)
             self.callbacks.saveExtensionSetting("elasticburp.index", self.confESIndex)
             self.callbacks.saveExtensionSetting("elasticburp.tools", str(self.confBurpTools))
-            self.callbacks.saveExtensionSetting("elasticburp.onlyresp", str(self.confBurpOnlyResp))
+            self.callbacks.saveExtensionSetting("elasticburp.onlyresp", str(int(self.confBurpOnlyResp)))
         except Exception as e:
             JOptionPane.showMessageDialog(self.panel, "<html><p style='width: 300px'>Error while initializing ElasticSearch: %s</p></html>" % (str(e)), "Error", JOptionPane.ERROR_MESSAGE)
 
@@ -79,7 +85,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         #self.idx.close()
         self.confESHost = self.uiESHost.getText()
         self.confESIndex = self.uiESIndex.getText()
-        self.confBurpTools = (self.uiCBSuite.isSelected() and IBurpExtenderCallbacks.TOOL_SUITE) | (self.uiCBTarget.isSelected() and IBurpExtenderCallbacks.TOOL_TARGET) | (self.uiCBProxy.isSelected() and IBurpExtenderCallbacks.TOOL_PROXY) | (self.uiCBSpider.isSelected() and IBurpExtenderCallbacks.TOOL_SPIDER) | (self.uiCBScanner.isSelected() and IBurpExtenderCallbacks.TOOL_SCANNER) | (self.uiCBIntruder.isSelected() and IBurpExtenderCallbacks.TOOL_INTRUDER) | (self.uiCBRepeater.isSelected() and IBurpExtenderCallbacks.TOOL_REPEATER) | (self.uiCBSequencer.isSelected() and IBurpExtenderCallbacks.TOOL_SEQUENCER) | (self.uiCBExtender.isSelected() and IBurpExtenderCallbacks.TOOL_EXTENDER)
+        self.confBurpTools = int((self.uiCBSuite.isSelected() and IBurpExtenderCallbacks.TOOL_SUITE) | (self.uiCBTarget.isSelected() and IBurpExtenderCallbacks.TOOL_TARGET) | (self.uiCBProxy.isSelected() and IBurpExtenderCallbacks.TOOL_PROXY) | (self.uiCBSpider.isSelected() and IBurpExtenderCallbacks.TOOL_SPIDER) | (self.uiCBScanner.isSelected() and IBurpExtenderCallbacks.TOOL_SCANNER) | (self.uiCBIntruder.isSelected() and IBurpExtenderCallbacks.TOOL_INTRUDER) | (self.uiCBRepeater.isSelected() and IBurpExtenderCallbacks.TOOL_REPEATER) | (self.uiCBSequencer.isSelected() and IBurpExtenderCallbacks.TOOL_SEQUENCER) | (self.uiCBExtender.isSelected() and IBurpExtenderCallbacks.TOOL_EXTENDER))
         self.confBurpOnlyResp = self.uiCBOptRespOnly.isSelected()
         self.applyConfig()
 
