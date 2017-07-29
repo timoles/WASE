@@ -23,7 +23,10 @@ from WASEHTMLParser import WASEHTMLParser
 from tzlocal import get_localzone
 
 reHeader = re.compile("^(.*?):\s*(.*)$")
-tz = get_localzone()
+try:
+    tz = get_localzone()
+except:
+    tz = None
 
 def parse_header(header):
     # TODO: support for multiline headers
