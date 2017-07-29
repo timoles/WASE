@@ -294,10 +294,10 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
                 expiration = None
                 if expCookie:
                     try:
-                        expiration = datetime.fromtimestamp(expCookie.time / 1000)
+                        expiration = str(datetime.fromtimestamp(expCookie.time / 1000))
                     except:
                         pass
-                doc.add_response_cookie(cookie.getName(), cookie.getValue(), cookie.getExpiration(), cookie.getPath(), expiration)
+                doc.add_response_cookie(cookie.getName(), cookie.getValue(), cookie.getDomain(), cookie.getPath(), expiration)
 
             bodyOffset = iResponse.getBodyOffset()
             doc.response.body = response[bodyOffset:].tostring().decode("ascii", "replace")
