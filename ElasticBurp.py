@@ -19,6 +19,7 @@ from javax.swing import JMenuItem, ProgressMonitor, JPanel, BoxLayout, JLabel, J
 from java.awt import Dimension
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Index
+from elasticsearch.helpers import bulk
 from doc_HttpRequestResponse import DocHTTPRequestResponse
 from datetime import datetime
 from email.utils import parsedate_tz, mktime_tz
@@ -45,10 +46,16 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         self.out = callbacks.getStdout()
 
         self.lastTimestamp = None
-        self.confESHost = ES_host
+        self.confESHost = self.callbacks.loadExtensionSetting("elasticburp.host") or ES_host
         self.confESIndex = self.callbacks.loadExtensionSetting("elasticburp.index") or ES_index
-        self.confBurpTools = Burp_Tools
-        self.confBurpOnlyResp = Burp_onlyResponses
+        self.confBurpTools = int(self.callbacks.loadExtensionSetting("elasticburp.tools") or Burp_Tools)
+        saved_onlyresp = self.callbacks.loadExtensionSetting("elasticburp.onlyresp") 
+        if saved_onlyresp == "True":
+            self.confBurpOnlyResp = True
+        elif saved_onlyresp == "False":
+            self.confBurpOnlyResp = False
+        else:
+            self.confBurpOnlyResp = bool(int(saved_onlyresp or Burp_onlyResponses))
 
         self.callbacks.addSuiteTab(self)
         self.applyConfig()
@@ -56,14 +63,17 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
     def applyConfig(self):
         try:
             print("Connecting to '%s', index '%s'" % (self.confESHost, self.confESIndex))
-            res = connections.create_connection(hosts=[self.confESHost])
+            self.es = connections.create_connection(hosts=[self.confESHost])
             self.idx = Index(self.confESIndex)
             self.idx.doc_type(DocHTTPRequestResponse)
             if self.idx.exists():
                 self.idx.open()
             else:
                 self.idx.create()
+            self.callbacks.saveExtensionSetting("elasticburp.host", self.confESHost)
             self.callbacks.saveExtensionSetting("elasticburp.index", self.confESIndex)
+            self.callbacks.saveExtensionSetting("elasticburp.tools", str(self.confBurpTools))
+            self.callbacks.saveExtensionSetting("elasticburp.onlyresp", str(int(self.confBurpOnlyResp)))
         except Exception as e:
             JOptionPane.showMessageDialog(self.panel, "<html><p style='width: 300px'>Error while initializing ElasticSearch: %s</p></html>" % (str(e)), "Error", JOptionPane.ERROR_MESSAGE)
 
@@ -75,7 +85,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         #self.idx.close()
         self.confESHost = self.uiESHost.getText()
         self.confESIndex = self.uiESIndex.getText()
-        self.confBurpTools = (self.uiCBSuite.isSelected() and IBurpExtenderCallbacks.TOOL_SUITE) | (self.uiCBTarget.isSelected() and IBurpExtenderCallbacks.TOOL_TARGET) | (self.uiCBProxy.isSelected() and IBurpExtenderCallbacks.TOOL_PROXY) | (self.uiCBSpider.isSelected() and IBurpExtenderCallbacks.TOOL_SPIDER) | (self.uiCBScanner.isSelected() and IBurpExtenderCallbacks.TOOL_SCANNER) | (self.uiCBIntruder.isSelected() and IBurpExtenderCallbacks.TOOL_INTRUDER) | (self.uiCBRepeater.isSelected() and IBurpExtenderCallbacks.TOOL_REPEATER) | (self.uiCBSequencer.isSelected() and IBurpExtenderCallbacks.TOOL_SEQUENCER) | (self.uiCBExtender.isSelected() and IBurpExtenderCallbacks.TOOL_EXTENDER)
+        self.confBurpTools = int((self.uiCBSuite.isSelected() and IBurpExtenderCallbacks.TOOL_SUITE) | (self.uiCBTarget.isSelected() and IBurpExtenderCallbacks.TOOL_TARGET) | (self.uiCBProxy.isSelected() and IBurpExtenderCallbacks.TOOL_PROXY) | (self.uiCBSpider.isSelected() and IBurpExtenderCallbacks.TOOL_SPIDER) | (self.uiCBScanner.isSelected() and IBurpExtenderCallbacks.TOOL_SCANNER) | (self.uiCBIntruder.isSelected() and IBurpExtenderCallbacks.TOOL_INTRUDER) | (self.uiCBRepeater.isSelected() and IBurpExtenderCallbacks.TOOL_REPEATER) | (self.uiCBSequencer.isSelected() and IBurpExtenderCallbacks.TOOL_SEQUENCER) | (self.uiCBExtender.isSelected() and IBurpExtenderCallbacks.TOOL_EXTENDER))
         self.confBurpOnlyResp = self.uiCBOptRespOnly.isSelected()
         self.applyConfig()
 
@@ -170,7 +180,8 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         if not tool & self.confBurpTools or isRequest and self.confBurpOnlyResp:
             return
 
-        self.saveToES(msg)
+        doc = self.genESDoc(msg)
+        doc.save()
 
     ### IContextMenuFactory ###
     def createMenuItems(self, invocation):
@@ -184,16 +195,19 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
         def menuAddToES(e):
             progress = ProgressMonitor(component, "Feeding ElasticSearch", "", 0, len(msgs))
             i = 0
+            docs = list()
             for msg in msgs:
                 if not Burp_onlyResponses or msg.getResponse():
-                    self.saveToES(msg, timeStampFromResponse=True)
+                    docs.append(self.genESDoc(msg, timeStampFromResponse=True).to_dict(True))
                 i += 1
                 progress.setProgress(i)
+            success, failed = bulk(self.es, docs, True, raise_on_error=False)
             progress.close()
+            JOptionPane.showMessageDialog(self.panel, "<html><p style='width: 300px'>Successful imported %d messages, %d messages failed.</p></html>" % (success, failed), "Finished", JOptionPane.INFORMATION_MESSAGE)
         return menuAddToES
 
     ### Interface to ElasticSearch ###
-    def saveToES(self, msg, timeStampFromResponse=False):
+    def genESDoc(self, msg, timeStampFromResponse=False):
         httpService = msg.getHttpService()
         doc = DocHTTPRequestResponse(protocol=httpService.getProtocol(), host=httpService.getHost(), port=httpService.getPort())
         doc.meta.index = self.confESIndex
@@ -280,10 +294,10 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
                 expiration = None
                 if expCookie:
                     try:
-                        expiration = datetime.fromtimestamp(expCookie.time / 1000)
+                        expiration = str(datetime.fromtimestamp(expCookie.time / 1000))
                     except:
                         pass
-                doc.add_response_cookie(cookie.getName(), cookie.getValue(), cookie.getExpiration(), cookie.getPath(), expiration)
+                doc.add_response_cookie(cookie.getName(), cookie.getValue(), cookie.getDomain(), cookie.getPath(), expiration)
 
             bodyOffset = iResponse.getBodyOffset()
             doc.response.body = response[bodyOffset:].tostring().decode("ascii", "replace")
@@ -296,4 +310,4 @@ class BurpExtender(IBurpExtender, IHttpListener, IContextMenuFactory, ITab):
                     except:
                         doc.timestamp = self.lastTimestamp      # fallback: last stored timestamp. Else: now
 
-        doc.save()
+        return doc
