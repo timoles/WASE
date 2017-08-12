@@ -26,7 +26,10 @@ from email.utils import parsedate_tz, mktime_tz
 from tzlocal import get_localzone
 import re
 
-tz = get_localzone()
+try:
+    tz = get_localzone()
+except:
+    tz = None
 reDateHeader = re.compile("^Date:\s*(.*)$", flags=re.IGNORECASE)
 
 ### Config (TODO: move to config tab) ###
