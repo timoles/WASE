@@ -42,9 +42,6 @@ identifierAnalyzer = analyzer("identifier",
         )
 
 class DocHTTPRequestResponse(DocType):
-    class Meta:
-        doc_type = 'HTTPRequestResponse'
-
     timestamp = Date()
     protocol = Keyword()
     host = Keyword()
@@ -70,7 +67,7 @@ class DocHTTPRequestResponse(DocType):
                         'value': Text(fields={'keyword': Keyword()})
                         }
                     ),
-                'body': Text(include_in_all=False)
+                'body': Text()
                 }
             )
     response = Object(
@@ -96,7 +93,7 @@ class DocHTTPRequestResponse(DocType):
                         'value': Text(fields={'keyword': Keyword()})
                         }
                     ),
-                'body': Text(include_in_all=False),
+                'body': Text(),
                 'doctype': Text(multi=True, fields={'keyword': Keyword()}),
                 'base': Text(multi=True, fields={'keyword': Keyword()}),
                 'stylesheets': Text(multi=True, fields={'keyword': Keyword()}),
