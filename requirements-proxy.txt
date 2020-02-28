@@ -1,6 +1,6 @@
 cryptography==2.8
-elasticsearch==5.1.0
-elasticsearch-dsl==5.1.0
+elasticsearch==6.0.0
+elasticsearch-dsl==6.0.0
 pymiproxy==1.0
 pyparsing==2.2.0
 six==1.10.0
